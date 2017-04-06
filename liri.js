@@ -1,5 +1,5 @@
 var userCommand = process.argv[2];
-var additionalCommands = process.argv[3];
+var additionalCommands = process.argv.splice(3);
 
 
 // =======================TWITTER=======================
@@ -22,11 +22,20 @@ function retrieveTweets(numberOfTweets){
 }
 // ----------------------POST TWEETS-----------------------
 function postTweets(){
+
 		client.post('statuses/update', {status: additionalCommands}, function(error, tweet, response) {
 		  if (!error) {
 		    console.log(tweet);
 		  }
 		});
+/*		var counter = 0;
+		client.post('statuses/update', {status: additionalCommands + counter.toString()})
+			.then(function(tweet){
+				console.log(tweet);
+				counter++;
+			})
+			.then(client.post('statuses/update'))*/
+
 }
 // =============================SPOTIFY================================
 var spotify = require('spotify');
@@ -36,14 +45,15 @@ function searchSong(song){
 	  if ( err ) {
 	      console.log('Error occurred: ' + err);
 	  }
-
+	  console.log("DATA: "+data);
 	  var dataObject = data.tracks.items;
 	  // console.log(dataObject);
 
-	  for (var i=0; i<dataObject.length; i++) {
-	  // for (var i=0; i<1; i++) {
+/*	  for (var i=0; i<dataObject.length; i++) {
+	  // for (var i=0; i<5; i++) {
 		  songInfo(dataObject[i]);
-		};
+		};*/
+		songInfo(dataObject[0]);
 	});
 }
 
@@ -57,6 +67,7 @@ function defaultSong(){
 }
 
 function songInfo(data){
+  console.log("---------------------------------");
   // ARTIST
   console.log("Artist: " + data.artists[0].name);
   // SONG NAME
@@ -68,6 +79,43 @@ function songInfo(data){
   console.log("---------------------------------");
 }
 
+// ==============================OMDB===================================
+var request = require('request');
+
+function getMovie(){
+
+	var movieTitle = additionalCommands.join('+');
+	
+	request("http://www.omdbapi.com/?t="+movieTitle+"&plot=short&r=json&tomatoes=true", function(error, response, body) {
+	  if (!error && response.statusCode === 200) {
+	  	var movieData = JSON.parse(body);
+	    // console.log(movieData);
+	  	console.log("---------------------------------");
+	    // TITLE
+	    console.log("Title: " + movieData.Title);
+	    // YEAR
+	    console.log("Year: " + movieData.Year);
+	    // IMDB RATING
+	    console.log("IMDB Rating: " + movieData.imdbRating);
+	    // COUNTRY
+	    console.log("Country: " + movieData.Country);
+	    // LANGUAGE
+	    console.log("Language: " + movieData.Language);
+	    // PLOT
+	    console.log("Plot: " + movieData.Plot);
+	    // ACTORS
+	    console.log("Actors: " + movieData.Actors);
+	    // ROTTEN TOMATOES RATING
+	    console.log("Rotten Tomatoes Rating: " + movieData.Ratings[1].Value);
+	    // ROTTEN TOMATOES URL
+	    console.log("Rotten Tomatoes URL: " + movieData.tomatoURL);
+  		console.log("---------------------------------");
+
+	  }
+	});
+
+}
+
 
 switch(userCommand) {
 	case "my-tweets":
@@ -77,7 +125,7 @@ switch(userCommand) {
 		postTweets();
 		break;
 	case "spotify-this-song":
-		if (additionalCommands === undefined) {
+		if (additionalCommands.length === 0) {
 			defaultSong();
 			break;
 		} 
@@ -86,6 +134,9 @@ switch(userCommand) {
 			break;
 		}
 		searchSong(additionalCommands);
+		break;
+	case "movie-this":
+		getMovie();
 		break;
 	default:
 		console.log("Command not recognized.");
