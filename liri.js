@@ -1,19 +1,16 @@
 var userCommand = process.argv[2];
 var additionalCommands = process.argv.splice(3);
-
+var movieTitle = additionalCommands.join('+');
 
 // =======================TWITTER=======================
 var twitter = require('twitter');
 
 var keys = require("./keys.js");
 var twitterKeys = keys.twitterKeys;
-// console.log(keys);
-// console.log(twitterKeys);
-
 var client = new twitter(twitterKeys);
 
 // --------------------RETRIEVE TWEETS--------------------
-function retrieveTweets(numberOfTweets){
+function retrieveTweets(numberOfTweets) {
 	client.get('statuses/user_timeline', function(error, tweets, response) {
 	   for(var i=0; i<numberOfTweets; i++){
 	   	console.log(tweets[i].text);
@@ -21,52 +18,36 @@ function retrieveTweets(numberOfTweets){
 	});
 }
 // ----------------------POST TWEETS-----------------------
-function postTweets(){
-
-		client.post('statuses/update', {status: additionalCommands}, function(error, tweet, response) {
-		  if (!error) {
+function postTweets(tweet) {
+		client.post('statuses/update', {status: tweet}, function(error, tweet, response) {
+		  if(!error) {
 		    console.log(tweet);
 		  }
 		});
-/*		var counter = 0;
-		client.post('statuses/update', {status: additionalCommands + counter.toString()})
-			.then(function(tweet){
-				console.log(tweet);
-				counter++;
-			})
-			.then(client.post('statuses/update'))*/
-
 }
 // =============================SPOTIFY================================
 var spotify = require('spotify');
 
-function searchSong(song){
+function searchSong(song) {
 	spotify.search({ type: 'track', query: song }, function(err, data) {
-	  if ( err ) {
+	  if( err ) {
 	      console.log('Error occurred: ' + err);
 	  }
-	  console.log("DATA: "+data);
 	  var dataObject = data.tracks.items;
-	  // console.log(dataObject);
-
-/*	  for (var i=0; i<dataObject.length; i++) {
-	  // for (var i=0; i<5; i++) {
-		  songInfo(dataObject[i]);
-		};*/
 		songInfo(dataObject[0]);
 	});
 }
 
-function defaultSong(){
+function defaultSong() {
 	spotify.lookup({ type: 'track', id: "0hrBpAOgrt8RXigk83LLNE" }, function(err, data) {
-	  if ( err ) {
+	  if( err ) {
 	      console.log('Error occurred: ' + err);
 	  } 
 	  songInfo(data);
 	});
 }
 
-function songInfo(data){
+function songInfo(data) {
   console.log("---------------------------------");
   // ARTIST
   console.log("Artist: " + data.artists[0].name);
@@ -78,18 +59,14 @@ function songInfo(data){
   console.log("Album: " + data.album.name);
   console.log("---------------------------------");
 }
-
 // ==============================OMDB===================================
 var request = require('request');
 
-function getMovie(){
-
-	var movieTitle = additionalCommands.join('+');
+function getMovie(movieName) {
 	
-	request("http://www.omdbapi.com/?t="+movieTitle+"&plot=short&r=json&tomatoes=true", function(error, response, body) {
-	  if (!error && response.statusCode === 200) {
+	request("http://www.omdbapi.com/?t="+movieName+"&plot=short&r=json&tomatoes=true", function(error, response, body) {
+	  if(!error && response.statusCode === 200) {
 	  	var movieData = JSON.parse(body);
-	    // console.log(movieData);
 	  	console.log("---------------------------------");
 	    // TITLE
 	    console.log("Title: " + movieData.Title);
@@ -106,26 +83,76 @@ function getMovie(){
 	    // ACTORS
 	    console.log("Actors: " + movieData.Actors);
 	    // ROTTEN TOMATOES RATING
-	    console.log("Rotten Tomatoes Rating: " + movieData.Ratings[1].Value);
+	    // If Ratings is a property in movieData
+			if(Object.keys(movieData).indexOf("Ratings") !== -1) {
+				if(movieData.Ratings.length > 2) {
+	    		console.log("Rotten Tomatoes Rating: " + movieData.Ratings[1].Value);
+	    	}
+	  	}
 	    // ROTTEN TOMATOES URL
 	    console.log("Rotten Tomatoes URL: " + movieData.tomatoURL);
   		console.log("---------------------------------");
-
 	  }
 	});
-
 }
+// ===============================FS====================================
+var fs = require('fs');
 
+function doWhatItSays() {
+	fs.readFile("random.txt", "utf8", function(error, data) {
+		// console.log(data);
+
+		var dataArray = data.split(",");
+		if(dataArray.length > 1) {
+			var movieArray = dataArray[1];
+			movieTitle = dataArray[1].split(" ").join("+");
+		} 
+		switch(dataArray[0]) {
+			case "my-tweets":
+				retrieveTweets(20);
+				break;
+			case "post-tweet":
+				postTweets(dataArray[1]);
+				break;
+			case "spotify-this-song":
+				if(dataArray.length === 1) {
+					defaultSong();
+					break;
+				}
+				else {
+					searchSong(dataArray[1]);
+					break;
+				}
+			case "movie-this":
+				console.log("movieTitle: "+movieTitle);
+				if(movieTitle === "") {
+					movieTitle = "Mr+Nobody";
+				}
+				getMovie(movieTitle);
+				break;
+			case "do-what-it-says":
+				errorNotice(1);
+				break;
+			default:
+				errorNotice(0);
+		}
+	})
+}
+// ==================================================================
+function errorNotice(number) {
+	var errorList = ["Command not recognized", "Can't run this command in .txt file"];
+	console.log(errorList[number]);
+}
 
 switch(userCommand) {
 	case "my-tweets":
 		retrieveTweets(20);
 		break;
 	case "post-tweet":
-		postTweets();
+		postTweets(additionalCommands);
 		break;
 	case "spotify-this-song":
-		if (additionalCommands.length === 0) {
+		if(additionalCommands.length === 0) {
 			defaultSong();
 			break;
 		} 
@@ -133,11 +160,15 @@ switch(userCommand) {
 			searchSong(additionalCommands);
 			break;
 		}
-		searchSong(additionalCommands);
-		break;
 	case "movie-this":
-		getMovie();
+		if(movieTitle === "") {
+			movieTitle = "Mr+Nobody";
+		}
+		getMovie(movieTitle);
+		break;
+	case "do-what-it-says":
+		doWhatItSays();
 		break;
 	default:
-		console.log("Command not recognized.");
+		errorNotice(0);
 }
