@@ -13,7 +13,8 @@ var client = new twitter(twitterKeys);
 function retrieveTweets(numberOfTweets) {
 	client.get('statuses/user_timeline', function(error, tweets, response) {
 	   for(var i=0; i<numberOfTweets; i++){
-	   	console.log(tweets[i].text);
+	   	console.log(tweets[i].user.name + " tweeted " + tweets[i].text + " at "+ tweets[i].created_at);
+	   	// console.log(tweets[i]);
 		 }
 	});
 }
